@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет | Управление профилем{% endblock %}
+
+{% block content %}
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/lk.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+</head>
+<body>
+
+<!-- Выдвижная панель -->
+<div class="slide-panel" id="slidePanel">
+    <div class="panel-content">
+        <h3>Меню</h3>
+
+        <!-- Список ссылок в панели -->
+        <ul class="panel-menu">
+            <li>
+                <a href="/stats">
+                    <i class="bi bi-bar-chart-steps"></i>
+                    Статистика
+                </a>
+            </li>
+            <li>
+                <a href="/my_links">
+                    <i class="bi bi-link-45deg"></i>
+                    Мои ссылки
+                </a>
+            </li>
+            <li>
+                <a href="/profile">
+                    <i class="bi bi-person-circle"></i>
+                    Личный кабинет
+                </a>
+            </li>
+        </ul>
+
+        <div class="panel-buttons">
+            <a href="/logout" class="panel-btn">
+                <i class="bi bi-box-arrow-in-right"></i> Выйти
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка для открытия панели -->
+<div class="panel-trigger" id="panelTrigger">
+    <i class="bi bi-chevron-right"></i>
+</div>
+
+<!-- Затемнение фона -->
+<div class="overlay" id="overlay"></div>
+
+<div class="main-content">
+    <div class="section-title">
+        <i class="bi bi-person-badge"></i>
+        Личный кабинет
+    </div>
+
+    <div class="profile-card">
+        <div class="avatar-section">
+            <div class="avatar-wrapper" id="avatarWrapper">
+                <div class="avatar-placeholder" id="avatarPlaceholder">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <img class="avatar-image" id="avatarImage" style="display: none;" alt="Аватар">
+                <div class="upload-btn-static" id="uploadBtn">
+                    <i class="bi bi-camera-fill"></i> <span>Загрузить фото</span>
+                </div>
+            </div>
+            <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/jpg,image/gif">
+        </div>
+
+        <div class="info-field">
+            <div class="field-label"><i class="bi bi-person"></i> Имя пользователя</div>
+            <div class="field-value">
+                <span class="user-data" id="usernameDisplay">{{ current_user.username if current_user.is_authenticated else 'Не авторизован' }}</span>
+                <span class="edit-icon-static"><i class="bi bi-pencil-square"></i></span>
+            </div>
+        </div>
+
+        <div class="info-field">
+            <div class="field-label"><i class="bi bi-envelope"></i> Электронная почта</div>
+            <div class="field-value">
+                <span class="user-data" id="emailDisplay">{{ current_user.email if current_user.is_authenticated else 'Не авторизован' }}</span>
+                <span class="edit-icon-static"><i class="bi bi-pencil-square"></i></span>
+            </div>
+        </div>
+
+        <div class="info-field">
+            <div class="field-label"><i class="bi bi-calendar-check"></i> Дата регистрации</div>
+            <div class="field-value">
+                <span class="user-data">
+                    {% if current_user.is_authenticated and current_user.created_at %}
+                        {{ current_user.created_at.strftime('%d.%m.%Y %H:%M') }}
+                    {% else %}
+                        Не указано
+                    {% endif %}
+                </span>
+                <i class="bi bi-patch-check-fill" style="color:#10b981; font-size: 18px;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    // Функция для загрузки фото на аватарку
+    function setupAvatarUpload() {
+        const avatarInput = document.getElementById('avatarInput');
+        const avatarPlaceholder = document.getElementById('avatarPlaceholder');
+        const avatarImage = document.getElementById('avatarImage');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const avatarWrapper = document.getElementById('avatarWrapper');
+
+        // Функция для сохранения аватара в localStorage
+        function saveAvatarToLocalStorage(imageData) {
+            try {
+                localStorage.setItem('userAvatar', imageData);
+                console.log('Аватар сохранен в localStorage');
+            } catch (error) {
+                console.error('Ошибка при сохранении аватара:', error);
+            }
+        }
+
+        // Функция для загрузки аватара из localStorage
+        function loadAvatarFromLocalStorage() {
+            try {
+                const savedAvatar = localStorage.getItem('userAvatar');
+                if (savedAvatar && savedAvatar !== 'null' && savedAvatar !== 'undefined') {
+                    displayAvatar(savedAvatar);
+                    console.log('Аватар загружен из localStorage');
+                }
+            } catch (error) {
+                console.error('Ошибка при загрузке аватара:', error);
+            }
+        }
+
+        // Функция для отображения аватара
+        function displayAvatar(imageData) {
+            if (imageData && imageData !== 'null' && imageData !== 'undefined') {
+                avatarImage.src = imageData;
+                avatarImage.style.display = 'block';
+                avatarPlaceholder.style.display = 'none';
+            } else {
+                avatarImage.style.display = 'none';
+                avatarPlaceholder.style.display = 'flex';
+            }
+        }
+
+        // Функция для обработки загруженного файла
+        function handleFileUpload(file) {
+            if (!file) return;
+
+            // Проверка типа файла
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Пожалуйста, выберите изображение в формате JPEG, PNG или GIF');
+                return;
+            }
+
+            // Проверка размера файла (максимум 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                alert('Размер файла не должен превышать 5MB');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const imageData = e.target.result;
+                displayAvatar(imageData);
+                saveAvatarToLocalStorage(imageData);
+
+                // Здесь можно добавить AJAX запрос на сервер для сохранения аватара
+                // uploadAvatarToServer(imageData);
+            };
+
+            reader.onerror = function() {
+                alert('Ошибка при чтении файла. Пожалуйста, попробуйте снова.');
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // Функция для загрузки на сервер (опционально)
+        function uploadAvatarToServer(imageData) {
+            fetch('/upload-avatar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ avatar: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Аватар успешно загружен на сервер');
+                } else {
+                    console.error('Ошибка при загрузке на сервер:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка сети:', error);
+            });
+        }
+
+        // Обработчик клика по кнопке загрузки
+        uploadBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            avatarInput.click();
+        });
+
+        // Также можно кликать по всему wrapper'у аватара
+        avatarWrapper.addEventListener('click', function(e) {
+            if (e.target !== uploadBtn && !uploadBtn.contains(e.target)) {
+                avatarInput.click();
+            }
+        });
+
+        // Обработчик выбора файла
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileUpload(file);
+            }
+            // Очищаем input, чтобы можно было загрузить тот же файл повторно
+            avatarInput.value = '';
+        });
+
+        // Загружаем сохраненный аватар при загрузке страницы
+        loadAvatarFromLocalStorage();
+    }
+
+    // Панель навигации
+    const panel = document.getElementById('slidePanel');
+    const trigger = document.getElementById('panelTrigger');
+    const overlay = document.getElementById('overlay');
+    let isOpen = false;
+
+    function openPanel() {
+        panel.classList.add('open');
+        overlay.classList.add('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-left"></i>';
+        isOpen = true;
+    }
+
+    function closePanel() {
+        panel.classList.remove('open');
+        overlay.classList.remove('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-right"></i>';
+        isOpen = false;
+    }
+
+    function togglePanel() {
+        if (isOpen) {
+            closePanel();
+        } else {
+            openPanel();
+        }
+    }
+
+    trigger.addEventListener('click', togglePanel);
+    overlay.addEventListener('click', closePanel);
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen) {
+            closePanel();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setupAvatarUpload();
+    });
+</script>
+
+</body>
+</html>
+
+{% endblock %}

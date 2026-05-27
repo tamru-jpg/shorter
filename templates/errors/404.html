@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/404.css') }}">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>404 - Страница не найдена</title>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-card">
+
+            <div style="padding: 30px; text-align: center;">
+                <h1 class="error-code">404</h1>
+                <h2 class="error-title">Страница не найдена</h2>
+                <p class="error-message">
+                    Ой! Похоже, страница, которую вы ищете, не существует или была перемещена.
+                </p>
+
+                <div style="margin-top: 25px;">
+                    <a href="/main" class="btn-home">
+                        Вернуться на главную
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

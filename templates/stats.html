@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Мои ссылки - Статистика{% endblock %}
+
+{% block content %}
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статистика ссылок</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+</head>
+
+<body>
+<!-- Выдвижная панель -->
+<div class="slide-panel" id="slidePanel">
+    <div class="panel-content">
+        <h3>Меню</h3>
+
+        <!-- Список ссылок в панели -->
+        <ul class="panel-menu">
+            <li>
+                <a href="/main">
+                    <i class="bi bi-link-45deg"></i>
+                    Главная страница
+                </a>
+            </li>
+            <li>
+                <a href="/my_links">
+                    <i class="bi bi-link-45deg"></i>
+                    Мои ссылки
+                </a>
+            </li>
+            <li>
+                <a href="/profile">
+                    <i class="bi bi-person-circle"></i>
+                    Личный кабинет
+                </a>
+            </li>
+        </ul>
+
+        <div class="panel-buttons">
+            <a href="/logout" class="panel-btn">
+                <i class="bi bi-box-arrow-in-right"></i> Выйти
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка для открытия панели -->
+<div class="panel-trigger" id="panelTrigger">
+    <i class="bi bi-chevron-right"></i>
+</div>
+
+<!-- Затемнение фона -->
+<div class="overlay" id="overlay"></div>
+</body>
+
+<div class="stats-container">
+    <div class="page-header" style="color: #000000;">
+    <h1 style="color: #000000;"><i class="bi bi-bar-chart-steps"></i> Статистика ссылок</h1>
+    <p style="color: #000000;">Аналитика переходов по всем вашим ссылкам</p>
+    </div>
+
+    <div class="total-card">
+        <i class="bi bi-eye" style="font-size: 32px; color: #667eea;"></i>
+        <div class="total-number">{{ total_clicks }}</div>
+        <div style="color: #6c6f78;">всего переходов по всем ссылкам</div>
+    </div>
+
+    {% if links %}
+    <div class="links-table-container">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Короткая ссылка</th>
+                        <th>Оригинальная ссылка</th>
+                        <th>Создана</th>
+                        <th>Переходы</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for link in links %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('links.redirect_to_original', short_code=link.short_code, _external=True) }}" class="short-link" target="_blank">
+                                {{ url_for('links.redirect_to_original', short_code=link.short_code, _external=True) }}
+                            </a>
+                        </td>
+                        <td>
+                            <div title="{{ link.original_url }}" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ link.original_url[:50] }}{% if link.original_url|length > 50 %}...{% endif %}
+                            </div>
+                        </td>
+                        <td>{{ link.created_at.strftime('%d.%m.%Y') if link.created_at else '—' }}</td>
+                        <td>
+                            <span class="badge bg-primary">{{ link.clicks_count or 0 }}</span>
+                        </td>
+                        <td>
+                            <button class="view-stats-btn" onclick="window.location.href='{{ url_for('links.show_stats', link_id=link.id) }}'">
+                                <i class="bi bi-graph-up"></i> Детальная статистика
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <h3>У вас пока нет ссылок</h3>
+        <p>Создайте ссылку на главной странице, чтобы видеть статистику</p>
+        <button class="btn btn-primary" onclick="window.location.href='/'">Создать ссылку</button>
+    </div>
+    {% endif %}
+</div>
+
+
+<script type="module">
+    // Панель навигации
+    const panel = document.getElementById('slidePanel');
+    const trigger = document.getElementById('panelTrigger');
+    const overlay = document.getElementById('overlay');
+    let isOpen = false;
+
+    function openPanel() {
+        panel.classList.add('open');
+        overlay.classList.add('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-left"></i>';
+        isOpen = true;
+    }
+
+    function closePanel() {
+        panel.classList.remove('open');
+        overlay.classList.remove('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-right"></i>';
+        isOpen = false;
+    }
+
+    function togglePanel() {
+        if (isOpen) {
+            closePanel();
+        } else {
+            openPanel();
+        }
+    }
+
+    trigger.addEventListener('click', togglePanel);
+    overlay.addEventListener('click', closePanel);
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen) {
+            closePanel();
+        }
+    });
+</script>
+{% endblock %}

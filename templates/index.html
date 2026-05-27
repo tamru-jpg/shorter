@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Shortener {% endblock %}
+
+{% block content %}
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сервис сокращения ссылок</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+
+</head>
+
+<body>
+
+<div class="white-window text-center" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 400px;">
+    <h2>Добро пожаловать в SHORTENER!</h2>
+    <p>Для использования сервиса зарегистрируйтесь
+        или войдите в существующий аккаунт</p>
+
+    <div class="d-grid gap-3">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-custom-gradient rounded-pill">Войти</a>
+
+        <a href="{{ url_for('auth.register') }}" class="btn btn-custom-gradient rounded-pill">Создать аккаунт</a>
+    </div>
+</div>
+
+</body>
+{% endblock %}

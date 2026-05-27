@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика ссылки{% endblock %}
+
+{% block content %}
+
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статистика ссылок</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stats_detail.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+</head>
+
+
+<body>
+<!-- Выдвижная панель -->
+<div class="slide-panel" id="slidePanel">
+    <div class="panel-content">
+        <h3>Меню</h3>
+
+        <!-- Список ссылок в панели -->
+        <ul class="panel-menu">
+            <li>
+                <a href="/main">
+                    <i class="bi bi-link-45deg"></i>
+                    Главная страница
+                </a>
+            </li>
+            <li>
+                <a href="/my_links">
+                    <i class="bi bi-link-45deg"></i>
+                    Мои ссылки
+                </a>
+            </li>
+            <li>
+                <a href="/profile">
+                    <i class="bi bi-person-circle"></i>
+                    Личный кабинет
+                </a>
+            </li>
+        </ul>
+
+        <div class="panel-buttons">
+            <a href="/logout" class="panel-btn">
+                <i class="bi bi-box-arrow-in-right"></i> Выйти
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка для открытия панели -->
+<div class="panel-trigger" id="panelTrigger">
+    <i class="bi bi-chevron-right"></i>
+</div>
+
+<!-- Затемнение фона -->
+<div class="overlay" id="overlay"></div>
+</body>
+
+
+<div class="stats-container">
+    <button class="back-btn" onclick="window.location.href='{{ url_for('links.overall_stats') }}'">
+        <i class="bi bi-arrow-left"></i> Назад к списку ссылок
+    </button>
+
+    <div id="loadingState" class="loading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Загрузка...</span>
+        </div>
+        <p class="mt-3">Загрузка статистики...</p>
+    </div>
+
+    <div id="statsContent" style="display: none;">
+        <!-- Header -->
+        <div class="stats-header">
+            <h1><i class="bi bi-link-45deg"></i> <span id="linkShortCode"></span></h1>
+            <div class="original-url">
+                <i class="bi bi-box-arrow-up-right"></i>
+                <a href="#" id="originalUrl" target="_blank"></a>
+            </div>
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <i class="bi bi-eye"></i>
+                    <div class="number" id="totalClicks">0</div>
+                    <div class="label">Всего переходов</div>
+                </div>
+                <div class="stat-card">
+                    <i class="bi bi-globe"></i>
+                    <div class="number" id="totalCountries">0</div>
+                    <div class="label">Стран</div>
+                </div>
+                <div class="stat-card">
+                    <i class="bi bi-display"></i>
+                    <div class="number" id="totalDevices">0</div>
+                    <div class="label">Типов устройств</div>
+                </div>
+                <div class="stat-card">
+                    <i class="bi bi-calendar"></i>
+                    <div class="number" id="createdAt">—</div>
+                    <div class="label">Дата создания</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Daily statistics -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h3><i class="bi bi-graph-up"></i> Переходы по дням</h3>
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Countries statistics -->
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h3><i class="bi bi-flag"></i> География переходов</h3>
+                    <div class="chart-container">
+                        <canvas id="countriesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Devices statistics -->
+            <div class="col-md-4">
+                <div class="chart-card">
+                    <h3><i class="bi bi-laptop"></i> Устройства</h3>
+                    <div class="chart-container">
+                        <canvas id="devicesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Browsers statistics -->
+            <div class="col-md-4">
+                <div class="chart-card">
+                    <h3><i class="bi bi-browser-chrome"></i> Браузеры</h3>
+                    <div class="chart-container">
+                        <canvas id="browsersChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OS statistics -->
+            <div class="col-md-4">
+                <div class="chart-card">
+                    <h3><i class="bi bi-windows"></i> Операционные системы</h3>
+                    <div class="chart-container">
+                        <canvas id="osChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent clicks -->
+        <div class="chart-card">
+            <h3><i class="bi bi-clock-history"></i> Последние переходы</h3>
+            <div class="clicks-table">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Дата и время</th>
+                            <th>Страна</th>
+                            <th>Город</th>
+                            <th>Устройство</th>
+                            <th>Браузер</th>
+                            <th>ОС</th>
+                            <th>Referer</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clicksTableBody">
+                        <tr><td colspan="7" class="text-center">Нет данных</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script type="module">
+    // Панель навигации
+    const panel = document.getElementById('slidePanel');
+    const trigger = document.getElementById('panelTrigger');
+    const overlay = document.getElementById('overlay');
+    let isOpen = false;
+
+    function openPanel() {
+        panel.classList.add('open');
+        overlay.classList.add('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-left"></i>';
+        isOpen = true;
+    }
+
+    function closePanel() {
+        panel.classList.remove('open');
+        overlay.classList.remove('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-right"></i>';
+        isOpen = false;
+    }
+
+    function togglePanel() {
+        if (isOpen) {
+            closePanel();
+        } else {
+            openPanel();
+        }
+    }
+
+    trigger.addEventListener('click', togglePanel);
+    overlay.addEventListener('click', closePanel);
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen) {
+            closePanel();
+        }
+    });
+</script>
+
+<script>
+    let dailyChart, countriesChart, devicesChart, browsersChart, osChart;
+
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-notification`;
+        notification.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.style.animation = 'fadeOut 0.5s ease';
+            setTimeout(() => notification.remove(), 500);
+        }, 3000);
+    }
+
+    async function loadStats() {
+        const linkId = {{ link.id }};
+
+        try {
+            const response = await fetch(`/api/link-stats/${linkId}`);
+            const data = await response.json();
+
+            if (!data.success) {
+                showNotification('Ошибка загрузки статистики', 'error');
+                return;
+            }
+
+            // Update header
+            document.getElementById('linkShortCode').textContent = data.link.short_code;
+            const originalUrlLink = document.getElementById('originalUrl');
+            originalUrlLink.href = data.link.original_url;
+            originalUrlLink.textContent = data.link.original_url.length > 80 ?
+                data.link.original_url.substring(0, 80) + '...' :
+                data.link.original_url;
+            document.getElementById('totalClicks').textContent = data.link.clicks_count;
+            document.getElementById('totalCountries').textContent = data.countries.length;
+            document.getElementById('totalDevices').textContent = data.devices.length;
+            document.getElementById('createdAt').textContent = new Date(data.link.created_at).toLocaleDateString('ru-RU');
+
+            // Create daily chart
+            const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+            if (dailyChart) dailyChart.destroy();
+            dailyChart = new Chart(dailyCtx, {
+                type: 'line',
+                data: {
+                    labels: data.daily_stats.map(d => d.date),
+                    datasets: [{
+                        label: 'Переходы',
+                        data: data.daily_stats.map(d => d.count),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+
+            // Create countries chart (Pie)
+            const countriesCtx = document.getElementById('countriesChart').getContext('2d');
+            if (countriesChart) countriesChart.destroy();
+            countriesChart = new Chart(countriesCtx, {
+                type: 'pie',
+                data: {
+                    labels: data.countries.map(c => c.name),
+                    datasets: [{
+                        data: data.countries.map(c => c.count),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                            '#43e97b', '#fa709a', '#fee140', '#30cfd0'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+
+            // Create devices chart
+            const devicesCtx = document.getElementById('devicesChart').getContext('2d');
+            if (devicesChart) devicesChart.destroy();
+            devicesChart = new Chart(devicesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.devices.map(d => d.name),
+                    datasets: [{
+                        data: data.devices.map(d => d.count),
+                        backgroundColor: ['#667eea', '#f093fb', '#43e97b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Create browsers chart
+            const browsersCtx = document.getElementById('browsersChart').getContext('2d');
+            if (browsersChart) browsersChart.destroy();
+            browsersChart = new Chart(browsersCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.browsers.map(b => b.name),
+                    datasets: [{
+                        label: 'Количество переходов',
+                        data: data.browsers.map(b => b.count),
+                        backgroundColor: '#667eea',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Create OS chart
+            const osCtx = document.getElementById('osChart').getContext('2d');
+            if (osChart) osChart.destroy();
+            osChart = new Chart(osCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.os.map(o => o.name),
+                    datasets: [{
+                        label: 'Количество переходов',
+                        data: data.os.map(o => o.count),
+                        backgroundColor: '#764ba2',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Fill clicks table
+            const tbody = document.getElementById('clicksTableBody');
+            tbody.innerHTML = '';
+
+            if (data.clicks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">Нет данных о переходах</td></tr>';
+            } else {
+                data.clicks.forEach(click => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${new Date(click.clicked_at).toLocaleString('ru-RU')}</td>
+                        <td>${click.country || 'Неизвестно'}</td>
+                        <td>${click.city || 'Неизвестно'}</td>
+                        <td>${click.device || 'Неизвестно'}</td>
+                        <td>${click.browser || 'Неизвестно'}</td>
+                        <td>${click.os || 'Неизвестно'}</td>
+                        <td><small>${click.referer || 'Direct'}</small></td>
+                    `;
+                });
+            }
+
+            // Show content
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('statsContent').style.display = 'block';
+
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            document.getElementById('loadingState').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Ошибка загрузки статистики. Пожалуйста, обновите страницу.
+                </div>
+            `;
+        }
+    }
+
+    // Load stats on page load
+    document.addEventListener('DOMContentLoaded', loadStats);
+</script>
+{% endblock %}

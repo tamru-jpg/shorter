@@ -1,0 +1,47 @@
+/* ========== GLASSMORPHISM С БОЛЬШИМ КОНТРАСТОМ ========== */
+
+body {
+    background: linear-gradient(145deg, #c5d5e8 0%, #8ba3bc 100%);
+    min-height: 100vh;
+}
+
+/* Стеклянное окно - более плотное */
+.white-window {
+    background: rgba(255, 255, 255, 0.55); /* Было 0.3 */
+    backdrop-filter: blur(20px);
+    border-radius: 48px;
+    padding: 48px 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.white-window h2 {
+    font-size: 32px;
+    font-weight: 800;
+    color: #0f1a24; /* Темнее для контраста */
+    text-shadow: 0 1px 2px rgba(255,255,255,0.3);
+}
+
+.white-window p {
+    color: #1a2c3a; /* Темнее */
+    font-weight: 500;
+}
+
+/* Кнопки - более контрастные */
+.btn-custom-gradient {
+    background: rgba(30, 42, 54, 0.85); /* Тёмный фон */
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 14px 28px;
+    font-weight: 700;
+    font-size: 16px;
+    color: white; /* Белый текст */
+    transition: all 0.3s ease;
+}
+
+.btn-custom-gradient:hover {
+    background: #1e2a36;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    color: white;
+}

@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}Главная страница {% endblock %}
+
+{% block content %}
+
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сервис сокращения ссылок</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <!-- Подключаем более стабильную библиотеку для QR -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+
+<body>
+
+<!-- Выдвижная панель -->
+<div class="slide-panel" id="slidePanel">
+    <div class="panel-content">
+        <h3>Меню</h3>
+
+        <!-- Список ссылок в панели -->
+        <ul class="panel-menu">
+            <li>
+                <a href="/stats">
+                    <i class="bi bi-bar-chart-steps"></i>
+                    Статистика
+                </a>
+            </li>
+            <li>
+                <a href="/my_links">
+                    <i class="bi bi-link-45deg"></i>
+                    Мои ссылки
+                </a>
+            </li>
+            <li>
+                <a href="/profile">
+                    <i class="bi bi-person-circle"></i>
+                    Личный кабинет
+                </a>
+            </li>
+        </ul>
+
+        <div class="panel-buttons">
+            <a href="/logout" class="panel-btn">
+                <i class="bi bi-box-arrow-in-right"></i> Выйти
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка для открытия панели -->
+<div class="panel-trigger" id="panelTrigger">
+    <i class="bi bi-chevron-right"></i>
+</div>
+
+<!-- Затемнение фона -->
+<div class="overlay" id="overlay"></div>
+
+<!-- Основной контент -->
+<div class="main-content">
+    <!-- Поле для ввода URL -->
+    <div class="url-container">
+        <h2 class="url-title">Сократите вашу ссылку</h2>
+        <p class="url-subtitle"></p>
+
+        <div class="url-input-group">
+            <input type="url" class="url-input" id="urlInput" placeholder="https://example.com/очень-длинная-ссылка" value="">
+            <button class="shorten-btn" id="shortenBtn">
+                <i class="bi bi-scissors"></i> Сократить
+            </button>
+        </div>
+
+        <!-- НОВОЕ ПОЛЕ: для сокращенной ссылки с кнопкой копирования -->
+        <div class="url-input-group" style="margin-top: 20px;">
+            <input type="text" class="url-input" id="shortenedUrlInput" placeholder="Сокращенная ссылка появится здесь" value="" readonly>
+            <button class="shorten-btn" id="copyShortenedBtn">
+                <i class="bi bi-clipboard"></i> Копировать
+            </button>
+        </div>
+
+        <!-- Статистика ссылки -->
+        <div id="linkStats" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+            <small><i class="bi bi-eye"></i> Просмотров: <span id="clickCount">0</span></small>
+        </div>
+    </div>
+
+    <!-- Блок для генерации QR-кода -->
+    <div class="qr-container">
+        <h3 class="qr-title">QR-код для ссылки</h3>
+        <div class="qr-placeholder" id="qrPlaceholder">
+            <i class="bi bi-qr-code"></i>
+            <p>Здесь будет сгенерирован QR-код</p>
+        </div>
+        <div class="qr-actions">
+            <button class="generate-qr-btn" id="downloadQrBtn" style="display: none;">
+                <i class="bi bi-download"></i> Скачать QR
+            </button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    // Импортируем библиотеку qr
+    import encodeQR from 'https://esm.sh/qr@0.5.5';
+
+    const panel = document.getElementById('slidePanel');
+    const trigger = document.getElementById('panelTrigger');
+    const overlay = document.getElementById('overlay');
+    let isOpen = false;
+
+    function openPanel() {
+        panel.classList.add('open');
+        overlay.classList.add('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-left"></i>';
+        isOpen = true;
+    }
+
+    function closePanel() {
+        panel.classList.remove('open');
+        overlay.classList.remove('active');
+        trigger.innerHTML = '<i class="bi bi-chevron-right"></i>';
+        isOpen = false;
+    }
+
+    function togglePanel() {
+        if (isOpen) {
+            closePanel();
+        } else {
+            openPanel();
+        }
+    }
+
+    // Открытие/закрытие при нажатии на триггер
+    trigger.addEventListener('click', togglePanel);
+
+    // Закрытие при клике на затемнение
+    overlay.addEventListener('click', closePanel);
+
+    // Закрытие по нажатию ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen) {
+            closePanel();
+        }
+    });
+
+    // ========== QR-код генерация ==========
+    const urlInput = document.getElementById('urlInput');
+    const shortenBtn = document.getElementById('shortenBtn');
+    const downloadQrBtn = document.getElementById('downloadQrBtn');
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+
+    // Новые элементы для сокращенной ссылки и копирования
+    const shortenedUrlInput = document.getElementById('shortenedUrlInput');
+    const copyShortenedBtn = document.getElementById('copyShortenedBtn');
+    const linkStats = document.getElementById('linkStats');
+    const clickCountSpan = document.getElementById('clickCount');
+
+    let currentCanvas = null; // Храним текущий canvas для скачивания
+    let currentShortCode = null; // Храним текущий короткий код
+    let currentOriginalUrl = null; // Храним текущую оригинальную ссылку
+
+    // Функция для копирования текста в буфер обмена
+    async function copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            // Визуальная обратная связь (меняем текст кнопки на время)
+            const originalText = copyShortenedBtn.innerHTML;
+            copyShortenedBtn.innerHTML = '<i class="bi bi-check-lg"></i> Скопировано!';
+            setTimeout(() => {
+                copyShortenedBtn.innerHTML = originalText;
+            }, 2000);
+        } catch (err) {
+            console.error('Ошибка копирования: ', err);
+            alert('Не удалось скопировать ссылку');
+        }
+    }
+
+    // Обработчик кнопки копирования
+    copyShortenedBtn.addEventListener('click', function() {
+        if (shortenedUrlInput.value && shortenedUrlInput.value.trim() !== '') {
+            copyToClipboard(shortenedUrlInput.value);
+        } else {
+            alert('Нет ссылки для копирования');
+        }
+    });
+
+    // Функция генерации QR-кода ДЛЯ ОРИГИНАЛЬНОЙ ССЫЛКИ
+    function generateQRCode(originalUrl) {
+        try {
+            // Очищаем placeholder
+            qrPlaceholder.innerHTML = '';
+
+            // Проверяем, что URL валидный
+            if (!originalUrl || originalUrl === '') {
+                throw new Error('URL не может быть пустым');
+            }
+
+            console.log('Генерация QR для ОРИГИНАЛЬНОГО URL:', originalUrl);
+
+            // Создаем контейнер для Canvas
+            const canvas = document.createElement('canvas');
+            canvas.id = 'qr-canvas';
+            canvas.width = 250;
+            canvas.height = 250;
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
+            canvas.style.border = '1px solid #ddd';
+            canvas.style.borderRadius = '8px';
+            canvas.style.marginBottom = '10px';
+
+            // Добавляем canvas в placeholder
+            qrPlaceholder.appendChild(canvas);
+
+            // Сохраняем canvas для скачивания
+            currentCanvas = canvas;
+
+            // Получаем raw матрицу QR-кода для ОРИГИНАЛЬНОЙ ссылки
+            let rawMatrix;
+            try {
+                rawMatrix = encodeQR(originalUrl, 'raw');
+            } catch (e) {
+                console.error('Ошибка при получении raw матрицы:', e);
+                throw new Error('Не удалось сгенерировать матрицу QR-кода');
+            }
+
+            // Проверяем, что матрица получена
+            if (!rawMatrix || !Array.isArray(rawMatrix) || rawMatrix.length === 0) {
+                throw new Error('Получена пустая матрица QR-кода');
+            }
+
+            const ctx = canvas.getContext('2d');
+            const matrixSize = rawMatrix.length;
+            const cellSize = canvas.width / matrixSize;
+
+            console.log('Размер матрицы:', matrixSize, 'x', matrixSize);
+
+            // Отрисовываем QR-код
+            for (let row = 0; row < matrixSize; row++) {
+                for (let col = 0; col < matrixSize; col++) {
+                    if (rawMatrix[row] && rawMatrix[row][col]) {
+                        ctx.fillStyle = '#000000'; // Черный пиксель
+                    } else {
+                        ctx.fillStyle = '#FFFFFF'; // Белый пиксель
+                    }
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+            }
+
+            // Добавляем границу
+            ctx.strokeStyle = '#cccccc';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            // Добавляем информацию о ссылке
+            const infoText = document.createElement('p');
+            infoText.className = 'qr-info';
+            infoText.style.marginTop = '10px';
+            infoText.style.fontSize = '12px';
+            infoText.style.color = '#6c757d';
+            qrPlaceholder.appendChild(infoText);
+
+            // Добавляем информацию о сокращенной ссылке (если есть)
+            if (shortenedUrlInput.value) {
+                const shortInfoText = document.createElement('p');
+                shortInfoText.style.marginTop = '5px';
+                shortInfoText.style.fontSize = '11px';
+                shortInfoText.style.color = '#28a745';
+                shortInfoText.innerHTML = `<i class="bi bi-link"></i> Сокращенная версия: ${shortenedUrlInput.value}`;
+                qrPlaceholder.appendChild(shortInfoText);
+            }
+
+            // Показываем кнопку скачивания
+            downloadQrBtn.style.display = 'inline-flex';
+
+            console.log('QR-код для оригинальной ссылки успешно сгенерирован!');
+
+        } catch (error) {
+            console.error('Ошибка генерации QR:', error);
+            qrPlaceholder.innerHTML = `
+                <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #dc3545;"></i>
+                <p style="color: #dc3545; margin-top: 10px;">Ошибка генерации QR-кода</p>
+                <p style="font-size: 12px; color: #6c757d;">${error.message || 'Проверьте ссылку и попробуйте снова'}</p>
+            `;
+            downloadQrBtn.style.display = 'none';
+            currentCanvas = null;
+        }
+    }
+
+    // Функция скачивания QR-кода в формате PNG
+    function downloadQRCode() {
+        if (!currentCanvas) {
+            alert('Сначала сгенерируйте QR-код');
+            return;
+        }
+
+        try {
+            // Конвертируем canvas в PNG и скачиваем
+            const downloadUrl = currentCanvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `qr-code-${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Ошибка при скачивании:', error);
+            alert('Ошибка при скачивании QR-кода');
+        }
+    }
+
+    // Получение статистики ссылки
+    async function getLinkStats(shortCode) {
+        try {
+            const response = await fetch(`/api/link-stats/${shortCode}`);
+            const data = await response.json();
+
+            if (data.success) {
+                clickCountSpan.textContent = data.clicks || 0;
+                linkStats.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Ошибка получения статистики:', error);
+        }
+    }
+
+    // Генерация QR по нажатию на кнопку (для текущей оригинальной ссылки)
+    downloadQrBtn.addEventListener('click', downloadQRCode);
+
+    // Обработчик сокращения ссылки с реальным запросом к серверу
+    shortenBtn.addEventListener('click', async function() {
+        const originalUrl = urlInput.value.trim();
+
+        if (!originalUrl) {
+            alert('Введите ссылку для сокращения');
+            return;
+        }
+
+        // Валидация URL
+        let urlToShorten = originalUrl;
+        if (!urlToShorten.startsWith('http://') && !urlToShorten.startsWith('https://')) {
+            urlToShorten = 'https://' + urlToShorten;
+        }
+
+        // Блокируем кнопку на время запроса
+        const originalButtonText = shortenBtn.innerHTML;
+        shortenBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Сокращение...';
+        shortenBtn.disabled = true;
+
+        try {
+            // Отправляем реальный запрос к API сервера
+            const formData = new FormData();
+            formData.append('original_url', urlToShorten);
+
+            const response = await fetch('/api/create-link', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Формируем полную короткую ссылку
+                const fullShortUrl = `${window.location.origin}/${data.short_code}`;
+                shortenedUrlInput.value = fullShortUrl;
+                currentShortCode = data.short_code;
+                currentOriginalUrl = urlToShorten;
+
+                // Получаем статистику для новой ссылки
+                await getLinkStats(data.short_code);
+
+                // Показываем уведомление об успехе
+                showNotification('Ссылка успешно сокращена!', 'success');
+
+                // Генерируем QR-код для ОРИГИНАЛЬНОЙ ссылки
+                generateQRCode(urlToShorten);
+            } else {
+                showNotification('Ошибка: ' + (data.error || 'Не удалось сократить ссылку'), 'error');
+            }
+        } catch (error) {
+            console.error('Ошибка при сокращении:', error);
+            showNotification('Ошибка при соединении с сервером. Пожалуйста, попробуйте позже.', 'error');
+        } finally {
+            // Разблокируем кнопку
+            shortenBtn.innerHTML = originalButtonText;
+            shortenBtn.disabled = false;
+        }
+    });
+
+    // Функция показа уведомлений
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} mt-3`;
+        notification.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.style.animation = 'fadeInOut 3s ease-in-out';
+        document.body.appendChild(notification);
+
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    // Генерация QR при нажатии Enter в поле ввода
+    urlInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            shortenBtn.click();
+        }
+    });
+</script>
+
+
+</body>
+{% endblock %}

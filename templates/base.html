@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+          integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+          crossorigin="anonymous">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <title>{% block title %}{{ title }} Шортер ссылок{% endblock %}</title>
+
+</head>
+
+<body>
+
+<header>
+    <nav class="navbar navbar-light bg-light shadow-sm">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-custom" href="#">🔗 SHORTENER</a>
+        </div>
+    </nav>
+</header>
+
+<main>
+    <div class="container mt-4">
+        {% block content %}
+        {% endblock %}
+    </div>
+</main>
+
+<footer>
+    <div class="container text-center">
+        <span>© 2026 SHORTENER — удобный сервис сокращения и анализа ссылок</span>
+    </div>
+</footer>
+
+</body>
+</html>
